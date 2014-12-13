@@ -56,6 +56,68 @@ docker run --name gitlab-ci-runner -it --rm -v $(pwd)/gitlab_ci_runner:/home/git
 docker run --name gitlab-ci-runner -d -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker -v $(pwd)/gitlab_ci_runner:/home/gitlab_ci_runner/data sameersbn/gitlab-ci-runner:5.0.0-1
 # Open http://localhost:10081/admin/runners to confirm runner works
 
+# Install Robot Framework on CI Runner
+docker exec -it gitlab-ci-runner /bin/bash
+echo 'Acquire::http::Proxy "http://172.17.42.1:3142";' > /etc/apt/apt.conf.d/11proxy
+apt-get update
+apt-get install firefox xvfb
+vi /etc/init.d/xvfb
+###############################################################################
+#! /bin/sh
+#
+# skeleton      example file to build /etc/init.d/ scripts.
+#               This file should be used to construct scripts for /etc/init.d.
+#
+#               Written by Miquel van Smoorenburg <miquels@cistron.nl>.
+#               Modified for Debian
+#               by Ian Murdock <imurdock@gnu.ai.mit.edu>.
+#               Further changes by Javier Fernandez-Sanguino <jfs@debian.org>
+#
+# Version:      @(#)skeleton  1.9  26-Feb-2001  miquels@cistron.nl
+#
+### BEGIN INIT INFO
+# Provides:          xvfb
+# Required-Start:    $remote_fs $network $named
+# Required-Stop:     $remote_fs $network $named
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start/stop xvfb
+# Description:       Start/stop xvfb daemon and its configured
+#                    subprocesses.
+### END INIT INFO
+
+XVFB=/usr/bin/Xvfb
+XVFBARGS=":99 -screen 0 1024x768x24 -fbdir /var/run -ac"
+PIDFILE=/var/run/xvfb.pid
+case "$1" in
+  start)
+    echo -n "Starting virtual X frame buffer: Xvfb"
+    start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile --background --exec $XVFB -- $XVFBARGS
+    echo "."
+    ;;
+  stop)
+    echo -n "Stopping virtual X frame buffer: Xvfb"
+    start-stop-daemon --stop --quiet --pidfile $PIDFILE
+    echo "."
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+        echo "Usage: /etc/init.d/xvfb {start|stop|restart}"
+        exit 1
+esac
+
+exit 0
+###############################################################################
+chmod +x /etc/init.d/xvfb
+wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+python get-pip.py
+rm get-pip.py
+pip install robotframework
+pip install robotframework-selenium2library
+
 # Setup Database Backup Server
 # Run Nginx container on root of cd-joomla directory
 docker run --name backup -d -p 81:80 -v `pwd`/backup:/usr/share/nginx/html nginx
@@ -67,15 +129,66 @@ sudo cat gitlab_ci_runner/.ssh/id_rsa.pub
 # Add above public key to Joomla Docker Project deploy key
 # Go to http://localhost:10081 to add Joomla Code Project to Gitlab CI
 # Go to Setting to config Build Jobs
-# Deploy master branch on production server
+# 05 Robot Framework with Selenium2Library Test develop branch
+if [ "$CI_BUILD_REF_NAME" == "develop" ]; then
+    BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
+    docker ps -a | awk '{print($NF)}' | grep "^mysql-test$" &> /dev/null && docker rm -f mysql-test
+    docker ps -a | awk '{print($NF)}' | grep "^joomla-test$" &> /dev/null && docker rm -f joomla-test
+    docker run -d --name mysql-test -h mysql -p 3310:3306 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
+    docker run -d --name joomla-test -h joomla -p 8010:80 -e 'MYSQL_PORT=3310' 172.17.42.1:5000/joomla:${BUILD_NUMBER:0:23}
+    rm -rf /tmp/robot-test/
+    mkdir -p /tmp/robot-test/
+    cd /tmp/robot-test/
+    if [ -d ".git" ]; then
+        git pull ssh://git@172.17.42.1:10022/root/joomla-test.git
+    else
+        git clone ssh://git@172.17.42.1:10022/root/joomla-test.git .
+    fi
+    sed -i 's/^${SERVER}.*/${SERVER}         172.17.42.1:8010/g' resource.txt
+    service xvfb start
+    export DISPLAY=:99
+    pybot . || EXIT_CODE=$?
+    cp -a /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
+    docker rm -f mysql-test joomla-test
+    [ -z $EXIT_CODE ] || exit $EXIT_CODE
+fi
+# 04 Robot Framework with Selenium2Library Test master branch
 if [ "$CI_BUILD_REF_NAME" == "master" ]; then
+    rm -rf /tmp/robot-test/
+    mkdir -p /tmp/robot-test/
+    cd /tmp/robot-test/
+    if [ -d ".git" ]; then
+        git pull ssh://git@172.17.42.1:10022/root/joomla-test.git
+    else
+        git clone ssh://git@172.17.42.1:10022/root/joomla-test.git .
+    fi
+    sed -i 's/^${SERVER}.*/${SERVER}         172.17.42.1/g' resource.txt
+    service xvfb start
+    export DISPLAY=:99
+    pybot . || EXIT_CODE=$?
+    cp -a /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
+    [ -z $EXIT_CODE ] || exit $EXIT_CODE
+fi
+# 03 Deploy master branch
+if [ "$CI_BUILD_REF_NAME" == "master" ]; then
+    BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
     docker ps -a | awk '{print($NF)}' | grep "^mysql$" &> /dev/null && docker rm -f mysql
     docker ps -a | awk '{print($NF)}' | grep "^joomla$" &> /dev/null && docker rm -f joomla
-    docker run -d --name mysql -h mysql -p 3306:3306 172.17.42.1:5000/mysql:master-${CI_BUILD_REF:0:8}
-    docker run -d --name joomla -h joomla -p 80:80 -p 443:443 172.17.42.1:5000/joomla:master-${CI_BUILD_REF:0:8}
+    docker run -d --name mysql -h mysql -p 3306:3306 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
+    docker run -d --name joomla -h joomla -p 80:80 -p 443:443 172.17.42.1:5000/joomla:${BUILD_NUMBER:0:23}
 fi
-# Build master branch Joomla MySQL Docker Image
-if [ "$CI_BUILD_REF_NAME" == "master" ]; then
+# 02 Build master branch Joomla MySQL Docker Image
+if [ "$CI_BUILD_REF_NAME" == "master" ] || [ "$CI_BUILD_REF_NAME" == "develop" ]; then
+    BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
+    echo $BUILD_NUMBER > /tmp/docker-build/mysql/build-number
+    docker build -t 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23} /tmp/docker-build/mysql/
+    docker tag -f 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23} 172.17.42.1:5000/mysql:latest
+    docker push 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
+    docker push 172.17.42.1:5000/mysql:latest
+fi
+# 01 Build master branch Joomla Docker Image
+if [ "$CI_BUILD_REF_NAME" == "master" ] || [ "$CI_BUILD_REF_NAME" == "develop" ]; then
+    CI_TIMESTAMP=$(date +%Y%m%d%H%M%S)
     mkdir -p /tmp/docker-build/
     cd /tmp/docker-build/
     ssh-keyscan -p 10022 -H 172.17.42.1 > /home/gitlab_ci_runner/data/.ssh/known_hosts
@@ -84,27 +197,13 @@ if [ "$CI_BUILD_REF_NAME" == "master" ]; then
     else
         git clone ssh://git@172.17.42.1:10022/root/joomla-docker.git .
     fi
-    cd mysql
-    docker build -t 172.17.42.1:5000/mysql .
-    docker tag 172.17.42.1:5000/mysql:latest 172.17.42.1:5000/mysql:master-${CI_BUILD_REF:0:8}
-    docker push 172.17.42.1:5000/mysql
-    docker push 172.17.42.1:5000/mysql:master-${CI_BUILD_REF:0:8}
-fi
-# Build master branch Joomla Docker Image
-if [ "$CI_BUILD_REF_NAME" == "master" ]; then
-    mkdir -p /tmp/docker-build/
-    cd /tmp/docker-build/
-    ssh-keyscan -p 10022 -H 172.17.42.1 > /home/gitlab_ci_runner/data/.ssh/known_hosts
-    if [ -d ".git" ]; then
-        git pull ssh://git@172.17.42.1:10022/root/joomla-docker.git
-    else
-        git clone ssh://git@172.17.42.1:10022/root/joomla-docker.git .
-    fi
-    cd joomla
-    docker build -t 172.17.42.1:5000/joomla .
-    docker tag 172.17.42.1:5000/joomla:latest 172.17.42.1:5000/joomla:master-${CI_BUILD_REF:0:8}
-    docker push 172.17.42.1:5000/joomla
-    docker push 172.17.42.1:5000/joomla:master-${CI_BUILD_REF:0:8}
+    rm -rf /tmp/docker-build/joomla/joomla
+    cp -a /home/gitlab_ci_runner/gitlab-ci-runner/tmp/builds/project-1 /tmp/docker-build/joomla/joomla
+    echo $CI_TIMESTAMP-$CI_BUILD_REF > /tmp/docker-build/joomla/build-number
+    docker build -t 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8} /tmp/docker-build/joomla/
+    docker tag -f 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8} 172.17.42.1:5000/joomla:latest
+    docker push 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8}
+    docker push 172.17.42.1:5000/joomla:latest
 fi
 # Change GitLab url to project to http://172.17.42.1:10080/root/joomla
 # Go to http://localhost:10080/root/joomla/services/gitlab_ci/edit and change Project url to http://172.17.42.1:10081/projects/1
@@ -126,5 +225,11 @@ git push -u origin master
 # Essential commands
 docker build -t mysql .
 docker build -t joomla .
+
+# Production
 docker run -d --name mysql -h mysql -p 3306:3306 mysql
-docker run -d --name joomla -h joomla -p 80:80 -p 443:443 joomla
+docker run -d --name joomla -h joomla -p 80:80 joomla
+
+# Dev
+docker run -d --name mysql-dev -h mysql -p 3307:3306 172.17.42.1:5000/mysql
+docker run -d --name joomla-dev -v $(pwd)/cd-joomla-code:/var/www/html -h joomla -p 8888:80 -e 'MYSQL_PORT=3307' 172.17.42.1:5000/joomla

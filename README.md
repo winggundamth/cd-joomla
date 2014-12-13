@@ -7,7 +7,7 @@ Practice for Joomla Continuous Delivery with Docker
 
 #### **Config Docker to trust local Docker Registry**
 **Ubuntu**
-```
+```bash
 echo 'DOCKER_OPTS="--insecure-registry 172.17.42.1:5000"' | sudo tee -a /etc/default/docker
 sudo restart docker
 ```

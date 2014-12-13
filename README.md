@@ -12,14 +12,14 @@ echo 'DOCKER_OPTS="--insecure-registry 172.17.42.1:5000"' | sudo tee -a /etc/def
 sudo restart docker
 ```
 **Boot2Docker**
-```
+```bash
 echo 'EXTRA_ARGS="--insecure-registry 172.17.42.1:5000"' | sudo tee -a /var/lib/boot2docker/profile
 sudo /etc/init.d/docker restart
 mkdir -p /home/docker/git /home/docker/ssh && sudo mount -t vboxsf -o uid=1000,gid=50 git /home/docker/git && sudo mount -t vboxsf -o uid=1000,gid=50 ssh /home/docker/ssh && docker start $(docker ps -aq) && eval $(ssh-agent) && ssh-add
 ```
 
 #### **Pull or update all use Docker Images**
-```
+```bash
 docker pull ubuntu:14.10 && \
 docker pull registry:latest && \
 docker pull atcol/docker-registry-ui:latest && \
@@ -30,26 +30,26 @@ docker pull nginx:latest
 ```
 
 #### **Setup Docker Registry with UI**
-```
+```bash
 docker run --name docker-registry -d -p 5000:5000 registry
 docker run --name docker-registry-ui -d -p 8080:8080 -e REG1=http://172.17.42.1:5000/v1/ atcol/docker-registry-ui
 ```
 Test by go to http://localhost:8080/repository/index
 Then test if local docker registry working
-```
+```bash
 docker tag ubuntu:14.10 172.17.42.1:5000/ubuntu:14.10
 docker push 172.17.42.1:5000/ubuntu:14.10
 ```
 You should see 172.17.42.1:5000/ubuntu:14.10 at Docker Registry UI
 
 #### **Setup Gitlab**
-```
+```bash
 docker run --name gitlab -d -e 'GITLAB_PORT=10080' -e 'GITLAB_SSH_PORT=10022' -p 10022:22 -p 10080:80 -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker sameersbn/gitlab:7.5.3
 ```
 This will take sometimes to complete
 
 To see setup progress
-```
+```bash
 docker logs gitlab
 ```
 
@@ -60,7 +60,7 @@ docker logs gitlab
 - Create *joomla*, *joomla docker* and *joomla test* project
 
 #### **Add Joomla Code to Gitlab**
-```
+```bash
 git pull git@git.winginfotech.net:continuous-delivery/cd-joomla-code.git
 cd cd-joomla-code
 git remote add cd ssh://git@localhost:10022/root/joomla.git
@@ -68,7 +68,7 @@ git push cd
 ```
 
 #### **Add Joomla Docker to Gitlab**
-```
+```bash
 git pull git@git.winginfotech.net:continuous-delivery/cd-joomla-docker.git
 cd cd-joomla-docker
 git remote add cd ssh://git@localhost:10022/root/joomla-docker.git
@@ -78,7 +78,7 @@ cat joomla/build-files/id_rsa.pub
 Put Joomla Dockerfile into Joomla deploy key
 
 #### **Add Joomla Test to Gitlab**
-```
+```bash
 git pull git@git.winginfotech.net:continuous-delivery/cd-joomla-test.git
 cd cd-joomla-test
 git remote add cd ssh://git@localhost:10022/root/joomla-test.git
@@ -86,13 +86,13 @@ git push cd
 ```
 
 #### **Setup Gitlab CI**
-```
+```bash
 docker run --name=gitlab-ci -d -p 10081:80 -e 'GITLAB_URL=http://172.17.42.1:10080' -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker sameersbn/gitlab-ci:5.2.1
 ```
 Test and get token by open http://localhost:10081/admin/runners
 
 #### **Run Gitlab CI Runner on root cd-joomla directory**
-```
+```bash
 git pull git@git.winginfotech.net:continuous-delivery/cd-joomla-code.git
 cd cd-joomla-code
 docker run --name gitlab-ci-runner -it --rm -v $(pwd)/gitlab_ci_runner:/home/gitlab_ci_runner/data sameersbn/gitlab-ci-runner:5.0.0-1 app:setup
@@ -102,7 +102,7 @@ docker run --name gitlab-ci-runner -d -v /var/run/docker.sock:/run/docker.sock -
 Test by open http://localhost:10081/admin/runners to confirm runner works
 
 #### **Install Robot Framework on CI Runner**
-```
+```bash
 docker exec -it gitlab-ci-runner /bin/bash
 echo 'Acquire::http::Proxy "http://172.17.42.1:3142";' > /etc/apt/apt.conf.d/11proxy
 apt-get update
@@ -170,14 +170,14 @@ exit
 
 #### **Setup Database Backup Server**
 Run Nginx container on root of cd-joomla directory
-```
+```bash
 docker run --name backup -d -p 81:80 -v `pwd`/backup:/usr/share/nginx/html nginx
 wget http://localhost:81/joomla.sql
 ```
 
 #### **Setup Gitlab to working together**
 On cd-joomla root directory
-```
+```bash
 sudo cat gitlab_ci_runner/.ssh/id_rsa.pub
 ```
 - Add above public key to Joomla Docker Project deploy key
@@ -185,7 +185,7 @@ sudo cat gitlab_ci_runner/.ssh/id_rsa.pub
 - Go to Setting to config Build Jobs
 
 **01 Build master branch Joomla Docker Image**
-```
+```bash
 if [ "$CI_BUILD_REF_NAME" == "master" ] || [ "$CI_BUILD_REF_NAME" == "develop" ]; then
     CI_TIMESTAMP=$(date +%Y%m%d%H%M%S)
     mkdir -p /tmp/docker-build/
@@ -207,7 +207,7 @@ fi
 ```
 
 **02 Build master branch Joomla MySQL Docker Image**
-```
+```bash
 if [ "$CI_BUILD_REF_NAME" == "master" ] || [ "$CI_BUILD_REF_NAME" == "develop" ]; then
     BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
     echo $BUILD_NUMBER > /tmp/docker-build/mysql/build-number
@@ -219,7 +219,7 @@ fi
 ```
 
 **03 Deploy master branch**
-```
+```bash
 if [ "$CI_BUILD_REF_NAME" == "master" ]; then
     BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
     docker ps -a | awk '{print($NF)}' | grep "^mysql$" &> /dev/null && docker rm -f mysql
@@ -230,7 +230,7 @@ fi
 ```
 
 **04 Robot Framework with Selenium2Library Test master branch**
-```
+```bash
 if [ "$CI_BUILD_REF_NAME" == "master" ]; then
     rm -rf /tmp/robot-test/
     mkdir -p /tmp/robot-test/
@@ -250,7 +250,7 @@ fi
 ```
 
 **05 Robot Framework with Selenium2Library Test develop branch**
-```
+```bash
 if [ "$CI_BUILD_REF_NAME" == "develop" ]; then
     BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
     docker ps -a | awk '{print($NF)}' | grep "^mysql-test$" &> /dev/null && docker rm -f mysql-test
@@ -282,7 +282,7 @@ fi
 ### ETC
 
 #### **First prepare Joomla**
-```
+```bash
 mkdir -p joomla
 cd joomla
 wget https://github.com/joomla/joomla-cms/releases/download/3.3.6/Joomla_3.3.6-Stable-Full_Package.zip
@@ -297,19 +297,19 @@ git push -u origin master
 ```
 
 #### **Essential commands**
-```
+```bash
 docker build -t mysql .
 docker build -t joomla .
 ```
 
 #### **Production**
-```
+```bash
 docker run -d --name mysql -h mysql -p 3306:3306 mysql
 docker run -d --name joomla -h joomla -p 80:80 joomla
 ```
 
 #### **Dev**
-```
+```bash
 docker run -d --name mysql-dev -h mysql -p 3307:3306 172.17.42.1:5000/mysql
 docker run -d --name joomla-dev -v $(pwd)/cd-joomla-code:/var/www/html -h joomla -p 8888:80 -e 'MYSQL_PORT=3307' 172.17.42.1:5000/joomla
 ```

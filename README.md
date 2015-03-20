@@ -3,7 +3,11 @@ Practice for Joomla Continuous Delivery with Docker
 
 #### **Prerequisite**
 * You must have Docker install
-* You must have apt-cacher-ng run on port 3142
+* You must have apt-cacher-ng run on port 3142 with command
+
+```bash
+docker run -d --name apt-cacher-ng -p 3142:80 tianon/apt-cacher-ng
+```
 
 #### **Config Docker to trust local Docker Registry**
 **Ubuntu**
@@ -23,9 +27,9 @@ mkdir -p /home/docker/git /home/docker/ssh && sudo mount -t vboxsf -o uid=1000,g
 docker pull ubuntu:14.10 && \
 docker pull registry:latest && \
 docker pull atcol/docker-registry-ui:latest && \
-docker pull sameersbn/gitlab:7.5.3 && \
-docker pull sameersbn/gitlab-ci:5.2.1 && \
-docker pull sameersbn/gitlab-ci-runner:5.0.0-1 && \
+docker pull sameersbn/gitlab:latest && \
+docker pull sameersbn/gitlab-ci:latest && \
+docker pull sameersbn/gitlab-ci-runner:latest && \
 docker pull nginx:latest
 ```
 

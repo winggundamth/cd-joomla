@@ -38,8 +38,9 @@ docker pull nginx:latest
 docker run --name docker-registry -d -p 5000:5000 registry
 docker run --name docker-registry-ui -d -p 8080:8080 -e REG1=http://172.17.42.1:5000/v1/ atcol/docker-registry-ui
 ```
-Test by go to http://localhost:8080/repository/index
-Then test if local docker registry working
+- Make sure local Docker Registry is running by go to http://localhost:8080/repository/index
+- Then try to push Docker image to our local Docker Registry with these command
+
 ```bash
 docker tag ubuntu:14.10 172.17.42.1:5000/ubuntu:14.10
 docker push 172.17.42.1:5000/ubuntu:14.10
@@ -48,13 +49,21 @@ You should see 172.17.42.1:5000/ubuntu:14.10 at Docker Registry UI
 
 #### **Setup Gitlab**
 ```bash
-docker run --name gitlab -d -e 'GITLAB_PORT=10080' -e 'GITLAB_SSH_PORT=10022' -p 10022:22 -p 10080:80 -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker sameersbn/gitlab:7.5.3
+docker run --name gitlab -d -e 'GITLAB_PORT=10080' -e 'GITLAB_SSH_PORT=10022' -p 10022:22 -p 10080:80 -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker sameersbn/gitlab
 ```
-This will take sometimes to complete
+- This will take sometimes to complete
+- To see setup progress
 
-To see setup progress
 ```bash
-docker logs gitlab
+docker logs -f gitlab
+```
+Until it shows something like this
+```
+INFO success: sidekiq entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+INFO success: unicorn entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+INFO success: cron entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+INFO success: sshd entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
 ```
 
 - Test if Gitlab working by go to http://localhost:10080

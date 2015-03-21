@@ -204,7 +204,9 @@ exit
 Run Nginx container on root of cd-joomla directory
 ```bash
 docker run --name backup -d -p 81:80 -v `pwd`/backup:/usr/share/nginx/html nginx
+# Test to make sure nginx container running properly by doing below command to download database backup file
 wget http://localhost:81/joomla.sql
+rm joomla.sql
 ```
 
 #### **Setup GitLab to working together**

@@ -167,7 +167,7 @@ cat <<'EOF' > /etc/init.d/xvfb
 
 XVFB=/usr/bin/Xvfb
 XVFBARGS=":99 -screen 0 1024x768x24 -fbdir /var/run -ac"
-PIDFILE=/var/run/xvfb.pid
+PIDFILE=/home/gitlab_ci_runner/xvfb.pid
 case "$1" in
   start)
     echo -n "Starting virtual X frame buffer: Xvfb"

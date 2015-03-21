@@ -197,7 +197,14 @@ python get-pip.py
 rm get-pip.py
 pip install robotframework
 pip install robotframework-selenium2library
+
+# Hack to make gitlab-ci-runner user can run docker command
+export DOCKER_GROUP_ID=$(ls -l /var/run/docker.sock | awk '{print $4}')
+echo "docker:x:$DOCKER_GROUP_ID:gitlab_ci_runner" >> /etc/group
+
 exit
+# Restart GitLab CI Runner to make new group effect
+docker restart gitlab-ci-runner
 ```
 
 #### **Setup Database Backup Server**
@@ -219,6 +226,7 @@ cat gitlab_ci_runner/.ssh/id_rsa.pub
 - Go to Settings and change these settings
   - GitLab url to project: http://172.17.42.1:10080/root/joomla
 - Go to Jobs to add these jobs for the commit
+** At this time since GitLab still have bug with the order when you add a job. I suggest to add from 05 job first on top then 04 until 01 and when you click on Save Change. It will order from 01 to 05 in List page. This is mandatory to make the jobs properly running with depenpency **
 
 **01 Build master branch Joomla Docker Image**
 ```bash

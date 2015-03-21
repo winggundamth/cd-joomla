@@ -47,7 +47,7 @@ docker push 172.17.42.1:5000/ubuntu:14.10
 ```
 You should see 172.17.42.1:5000/ubuntu:14.10 at Docker Registry UI
 
-#### **Setup Gitlab**
+#### **Setup GitLab**
 ```bash
 docker run --name gitlab -d -e 'GITLAB_PORT=10080' -e 'GITLAB_SSH_PORT=10022' -p 10022:22 -p 10080:80 -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker sameersbn/gitlab
 ```
@@ -66,7 +66,7 @@ INFO success: nginx entered RUNNING state, process has stayed up for > than 1 se
 INFO success: sshd entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
 ```
 
-- Test if Gitlab working by go to http://localhost:10080
+- Test if GitLab working by go to http://localhost:10080
 - Login with root/5iveL!fe
 - Set new password
 - Add your ssh key
@@ -75,7 +75,7 @@ INFO success: sshd entered RUNNING state, process has stayed up for > than 1 sec
   - joomla-docker
   - joomla test
 
-#### **Add Joomla Code to Gitlab**
+#### **Add Joomla Code to GitLab**
 ```bash
 git clone git@git.winginfotech.net:continuous-delivery/cd-joomla-code.git
 cd cd-joomla-code
@@ -84,7 +84,7 @@ git push cd
 cd ..
 ```
 
-#### **Add Joomla Docker to Gitlab**
+#### **Add Joomla Docker to GitLab**
 ```bash
 git clone git@git.winginfotech.net:continuous-delivery/cd-joomla-docker.git
 cd cd-joomla-docker
@@ -94,9 +94,9 @@ cat joomla/build-files/id_rsa.pub
 # copy this public key
 cd ..
 ```
-Put your copied public key into [deploy keys](http://localhost:10080/root/joomla/deploy_keys) in your local Gitlab at Joomla repository
+Put your copied public key into [deploy keys](http://localhost:10080/root/joomla/deploy_keys) in your local GitLab at Joomla repository
 
-#### **Add Joomla Test to Gitlab**
+#### **Add Joomla Test to GitLab**
 ```bash
 git clone git@git.winginfotech.net:continuous-delivery/cd-joomla-test.git
 cd cd-joomla-test
@@ -105,7 +105,7 @@ git push cd
 cd ..
 ```
 
-#### **Setup Gitlab CI**
+#### **Setup GitLab CI**
 - Go to http://localhost:10080/admin/applications and create New Application then put this information
   - Name: GitLab CI
   - Redirect URI: http://localhost:10081/user_sessions/callback
@@ -122,15 +122,15 @@ docker run --name=gitlab-ci -d -p 10081:80 \
 - Test to make sure GitLab CI is running properly by go to http://localhost:10081 and login with your GitLab account then Authorize GitLab CI
 - Copy GitLab CI token by open http://localhost:10081/admin/runners
 
-#### **Run Gitlab CI Runner on root cd-joomla directory**
+#### **Run GitLab CI Runner**
 ```bash
-git pull git@git.winginfotech.net:continuous-delivery/cd-joomla-code.git
-cd cd-joomla-code
-docker run --name gitlab-ci-runner -it --rm -v $(pwd)/gitlab_ci_runner:/home/gitlab_ci_runner/data sameersbn/gitlab-ci-runner:5.0.0-1 app:setup
+git clone git@git.winginfotech.net:continuous-delivery/cd-joomla.git
+cd cd-joomla
+docker run --name gitlab-ci-runner -it --rm -v $(pwd)/gitlab_ci_runner:/home/gitlab_ci_runner/data sameersbn/gitlab-ci-runner app:setup
 # Put URL http://172.17.42.1:10081 and token
-docker run --name gitlab-ci-runner -d -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker -v $(pwd)/gitlab_ci_runner:/home/gitlab_ci_runner/data sameersbn/gitlab-ci-runner:5.0.0-1
+docker run --name gitlab-ci-runner -d -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker -v $(pwd)/gitlab_ci_runner:/home/gitlab_ci_runner/data sameersbn/gitlab-ci-runner
 ```
-Test by open http://localhost:10081/admin/runners to confirm runner works
+Test to make sure it is running by open http://localhost:10081/admin/runners and it should have one runner listed
 
 #### **Install Robot Framework on CI Runner**
 ```bash
@@ -206,13 +206,13 @@ docker run --name backup -d -p 81:80 -v `pwd`/backup:/usr/share/nginx/html nginx
 wget http://localhost:81/joomla.sql
 ```
 
-#### **Setup Gitlab to working together**
+#### **Setup GitLab to working together**
 On cd-joomla root directory
 ```bash
 sudo cat gitlab_ci_runner/.ssh/id_rsa.pub
 ```
 - Add above public key to Joomla Docker Project deploy key
-- Go to http://localhost:10081 to add Joomla Code Project to Gitlab CI
+- Go to http://localhost:10081 to add Joomla Code Project to GitLab CI
 - Go to Setting to config Build Jobs
 
 **01 Build master branch Joomla Docker Image**

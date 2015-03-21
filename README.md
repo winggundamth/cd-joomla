@@ -70,32 +70,39 @@ INFO success: sshd entered RUNNING state, process has stayed up for > than 1 sec
 - Login with root/5iveL!fe
 - Set new password
 - Add your ssh key
-- Create *joomla*, *joomla docker* and *joomla test* project
+- Create these projects
+  - joomla
+  - joomla-docker
+  - joomla test
 
 #### **Add Joomla Code to Gitlab**
 ```bash
-git pull git@git.winginfotech.net:continuous-delivery/cd-joomla-code.git
+git clone git@git.winginfotech.net:continuous-delivery/cd-joomla-code.git
 cd cd-joomla-code
 git remote add cd ssh://git@localhost:10022/root/joomla.git
 git push cd
+cd ..
 ```
 
 #### **Add Joomla Docker to Gitlab**
 ```bash
-git pull git@git.winginfotech.net:continuous-delivery/cd-joomla-docker.git
+git clone git@git.winginfotech.net:continuous-delivery/cd-joomla-docker.git
 cd cd-joomla-docker
 git remote add cd ssh://git@localhost:10022/root/joomla-docker.git
 git push cd
 cat joomla/build-files/id_rsa.pub
+# copy this public key
+cd ..
 ```
-Put Joomla Dockerfile into Joomla deploy key
+Put your copied public key into [deploy keys](http://localhost:10080/root/joomla/deploy_keys) in your local Gitlab at Joomla repository
 
 #### **Add Joomla Test to Gitlab**
 ```bash
-git pull git@git.winginfotech.net:continuous-delivery/cd-joomla-test.git
+git clone git@git.winginfotech.net:continuous-delivery/cd-joomla-test.git
 cd cd-joomla-test
 git remote add cd ssh://git@localhost:10022/root/joomla-test.git
 git push cd
+cd ..
 ```
 
 #### **Setup Gitlab CI**

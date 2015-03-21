@@ -212,11 +212,13 @@ rm joomla.sql
 #### **Setup GitLab to working together**
 On cd-joomla root directory
 ```bash
-sudo cat gitlab_ci_runner/.ssh/id_rsa.pub
+cat gitlab_ci_runner/.ssh/id_rsa.pub
 ```
-- Add above public key to Joomla Docker Project deploy key
-- Go to http://localhost:10081 to add Joomla Code Project to GitLab CI
-- Go to Setting to config Build Jobs
+- Add above public key to Local GitLab at Joomla Docker repository as [deploy keys](http://localhost:10080/root/joomla-docker/deploy_keys)
+- Go to http://localhost:10081 to add joomla repository to GitLab CI
+- Go to Settings and change these settings
+  - GitLab url to project: http://172.17.42.1:10080/root/joomla
+- Go to Jobs to add these jobs for the commit
 
 **01 Build master branch Joomla Docker Image**
 ```bash
@@ -309,9 +311,8 @@ if [ "$CI_BUILD_REF_NAME" == "develop" ]; then
 fi
 ```
 
-- Change GitLab url to project to http://172.17.42.1:10080/root/joomla
-- Go to http://localhost:10080/root/joomla/services/gitlab_ci/edit and change Project url to http://172.17.42.1:10081/projects/1
-- Test Setting to see Docker build working
+- Go to Local GitLab Joomla repository to change GitLab CI URL here http://localhost:10080/root/joomla/services/gitlab_ci/edit and change Project url to http://172.17.42.1:10081/projects/1
+- Press Test setting button and go to [local GitLab CI](http://localhost:10081) to see how's it working
 
 ### ETC
 

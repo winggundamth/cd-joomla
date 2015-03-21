@@ -167,7 +167,7 @@ cat <<'EOF' > /etc/init.d/xvfb
 
 XVFB=/usr/bin/Xvfb
 XVFBARGS=":99 -screen 0 1024x768x24 -fbdir /var/run -ac"
-PIDFILE=/home/gitlab_ci_runner/xvfb.pid
+PIDFILE=/var/run/xvfb.pid
 case "$1" in
   start)
     echo -n "Starting virtual X frame buffer: Xvfb"
@@ -192,6 +192,7 @@ exit 0
 EOF
 
 chmod +x /etc/init.d/xvfb
+sed -i "/set -e/a \service xvfb start" /app/init
 wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py
 python get-pip.py
 rm get-pip.py
@@ -203,7 +204,7 @@ export DOCKER_GROUP_ID=$(ls -l /var/run/docker.sock | awk '{print $4}')
 echo "docker:x:$DOCKER_GROUP_ID:gitlab_ci_runner" >> /etc/group
 
 exit
-# Restart GitLab CI Runner to make new group effect
+# Restart GitLab CI Runner to apply new configuration
 docker restart gitlab-ci-runner
 ```
 
@@ -286,10 +287,9 @@ if [ "$CI_BUILD_REF_NAME" == "master" ]; then
         git clone ssh://git@172.17.42.1:10022/root/joomla-test.git .
     fi
     sed -i 's/^${SERVER}.*/${SERVER}         172.17.42.1/g' resource.txt
-    service xvfb start
     export DISPLAY=:99
     pybot . || EXIT_CODE=$?
-    cp -a /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
+    rsync -avrzh --progress --exclude .git /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
     [ -z $EXIT_CODE ] || exit $EXIT_CODE
 fi
 ```
@@ -311,10 +311,9 @@ if [ "$CI_BUILD_REF_NAME" == "develop" ]; then
         git clone ssh://git@172.17.42.1:10022/root/joomla-test.git .
     fi
     sed -i 's/^${SERVER}.*/${SERVER}         172.17.42.1:8010/g' resource.txt
-    service xvfb start
     export DISPLAY=:99
     pybot . || EXIT_CODE=$?
-    cp -a /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
+    rsync -avrzh --progress --exclude .git /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
     docker rm -f mysql-test joomla-test
     [ -z $EXIT_CODE ] || exit $EXIT_CODE
 fi

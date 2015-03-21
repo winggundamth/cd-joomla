@@ -132,10 +132,11 @@ docker run --name gitlab-ci-runner -d -v /var/run/docker.sock:/run/docker.sock -
 ```
 Test to make sure it is running by open http://localhost:10081/admin/runners and it should have one runner listed
 
-#### **Install Robot Framework on CI Runner**
+#### **Install Robot Framework on GitLab CI Runner**
 ```bash
-docker exec -it gitlab-ci-runner /bin/bash
+docker exec -it gitlab-ci-runner bash
 echo 'Acquire::http::Proxy "http://172.17.42.1:3142";' > /etc/apt/apt.conf.d/11proxy
+export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y firefox xvfb
 

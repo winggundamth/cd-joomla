@@ -222,6 +222,7 @@ On cd-joomla root directory
 cat gitlab_ci_runner/.ssh/id_rsa.pub
 ```
 - Add above public key to Local GitLab at Joomla Docker repository as [deploy keys](http://localhost:10080/root/joomla-docker/deploy_keys)
+- Go to local GitLab at Joomla Test repository in [deploy keys](http://localhost:10080/root/joomla-test/deploy_keys) and Enable gitlab_ci_runner key to this repository
 - Go to http://localhost:10081 to add joomla repository to GitLab CI
 - Go to Settings and change these settings
   - GitLab url to project: http://172.17.42.1:10080/root/joomla

@@ -106,10 +106,21 @@ cd ..
 ```
 
 #### **Setup Gitlab CI**
+- Go to http://localhost:10080/admin/applications and create New Application then put this information
+  - Name: GitLab CI
+  - Redirect URI: http://localhost:10081/user_sessions/callback
+- Copy Application Id and Secret and replace to below command at GITLAB_APP_ID and GITLAB_APP_SECRET variables
+
 ```bash
-docker run --name=gitlab-ci -d -p 10081:80 -e 'GITLAB_URL=http://172.17.42.1:10080' -v /var/run/docker.sock:/run/docker.sock -v $(which docker):/bin/docker sameersbn/gitlab-ci:5.2.1
+docker run --name=gitlab-ci -d -p 10081:80 \
+-e 'GITLAB_URL=http://172.17.42.1:10080' \
+-e 'GITLAB_APP_ID=xxx' \
+-e 'GITLAB_APP_SECRET=yyy' \
+-v /var/run/docker.sock:/run/docker.sock \
+-v $(which docker):/bin/docker sameersbn/gitlab-ci
 ```
-Test and get token by open http://localhost:10081/admin/runners
+- Test to make sure GitLab CI is running properly by go to http://localhost:10081 and login with your GitLab account then Authorize GitLab CI
+- Copy GitLab CI token by open http://localhost:10081/admin/runners
 
 #### **Run Gitlab CI Runner on root cd-joomla directory**
 ```bash

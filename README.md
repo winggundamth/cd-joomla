@@ -138,7 +138,7 @@ docker exec -it gitlab-ci-runner bash
 echo 'Acquire::http::Proxy "http://172.17.42.1:3142";' > /etc/apt/apt.conf.d/11proxy
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y firefox xvfb
+apt-get install -y firefox xvfb rsync
 
 cat <<'EOF' > /etc/init.d/xvfb
 ###############################################################################

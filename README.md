@@ -73,7 +73,7 @@ INFO success: sshd entered RUNNING state, process has stayed up for > than 1 sec
 - Create these projects
   - joomla
   - joomla-docker
-  - joomla test
+  - joomla-test
 
 #### **Add Joomla Code to GitLab**
 ```bash
@@ -227,98 +227,100 @@ cat gitlab_ci_runner/.ssh/id_rsa.pub
 - Go to http://localhost:10081 to add joomla repository to GitLab CI
 - Go to Settings and change these settings
   - GitLab url to project: http://172.17.42.1:10080/root/joomla
-- Go to Jobs to add these jobs for the commit
-** At this time since GitLab still have bug with the order when you add a job. I suggest to add from 05 job first on top then 04 until 01 and when you click on Save Change. It will order from 01 to 05 in List page. This is mandatory to make the jobs properly running with depenpency **
+- Go to Jobs > Deploy (run on success) tab and click on Add a job to add each job one by one
 
-**01 Build master branch Joomla Docker Image**
+**At this time since GitLab still have bug with the order when you add a job. I suggest to add from 05 job first on top then 04 until 01 and when you click on Save Change. It will order from 01 to 05 in List page. This is mandatory to make the jobs properly running with depenpency**
+
+- Name: **01 Build master and develop branch Joomla Docker Image**
+- Refs: master, develop
+
 ```bash
-if [ "$CI_BUILD_REF_NAME" == "master" ] || [ "$CI_BUILD_REF_NAME" == "develop" ]; then
-    CI_TIMESTAMP=$(date +%Y%m%d%H%M%S)
-    mkdir -p /tmp/docker-build/
-    cd /tmp/docker-build/
-    ssh-keyscan -p 10022 -H 172.17.42.1 > /home/gitlab_ci_runner/data/.ssh/known_hosts
-    if [ -d ".git" ]; then
-        git pull ssh://git@172.17.42.1:10022/root/joomla-docker.git
-    else
-        git clone ssh://git@172.17.42.1:10022/root/joomla-docker.git .
-    fi
-    rm -rf /tmp/docker-build/joomla/joomla
-    cp -a /home/gitlab_ci_runner/gitlab-ci-runner/tmp/builds/project-1 /tmp/docker-build/joomla/joomla
-    echo $CI_TIMESTAMP-$CI_BUILD_REF > /tmp/docker-build/joomla/build-number
-    docker build -t 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8} /tmp/docker-build/joomla/
-    docker tag -f 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8} 172.17.42.1:5000/joomla:latest
-    docker push 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8}
-    docker push 172.17.42.1:5000/joomla:latest
+CI_TIMESTAMP=$(date +%Y%m%d%H%M%S)
+mkdir -p /tmp/docker-build/
+cd /tmp/docker-build/
+ssh-keyscan -p 10022 -H 172.17.42.1 > /home/gitlab_ci_runner/data/.ssh/known_hosts
+if [ -d ".git" ]; then
+    git pull ssh://git@172.17.42.1:10022/root/joomla-docker.git
+else
+    git clone ssh://git@172.17.42.1:10022/root/joomla-docker.git .
 fi
+rm -rf /tmp/docker-build/joomla/joomla
+cp -a /home/gitlab_ci_runner/gitlab-ci-runner/tmp/builds/project-1 /tmp/docker-build/joomla/joomla
+echo $CI_TIMESTAMP-$CI_BUILD_REF > /tmp/docker-build/joomla/build-number
+docker build -t 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8} /tmp/docker-build/joomla/
+docker tag -f 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8} 172.17.42.1:5000/joomla:latest
+docker push 172.17.42.1:5000/joomla:$CI_TIMESTAMP-${CI_BUILD_REF:0:8}
+docker push 172.17.42.1:5000/joomla:latest
 ```
 
-**02 Build master branch Joomla MySQL Docker Image**
+- Name: **02 Build master and develop branch Joomla MySQL Docker Image**
+- Refs: master, develop
+
 ```bash
-if [ "$CI_BUILD_REF_NAME" == "master" ] || [ "$CI_BUILD_REF_NAME" == "develop" ]; then
-    BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
-    echo $BUILD_NUMBER > /tmp/docker-build/mysql/build-number
-    docker build -t 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23} /tmp/docker-build/mysql/
-    docker tag -f 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23} 172.17.42.1:5000/mysql:latest
-    docker push 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
-    docker push 172.17.42.1:5000/mysql:latest
-fi
+BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
+echo $BUILD_NUMBER > /tmp/docker-build/mysql/build-number
+docker build -t 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23} /tmp/docker-build/mysql/
+docker tag -f 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23} 172.17.42.1:5000/mysql:latest
+docker push 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
+docker push 172.17.42.1:5000/mysql:latest
 ```
 
-**03 Deploy master branch**
+- Name: **03 Deploy master branch**
+- Refs: master
+
 ```bash
-if [ "$CI_BUILD_REF_NAME" == "master" ]; then
-    BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
-    docker ps -a | awk '{print($NF)}' | grep "^mysql$" &> /dev/null && docker rm -f mysql
-    docker ps -a | awk '{print($NF)}' | grep "^joomla$" &> /dev/null && docker rm -f joomla
-    docker run -d --name mysql -h mysql -p 3306:3306 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
-    docker run -d --name joomla -h joomla -p 80:80 -p 443:443 172.17.42.1:5000/joomla:${BUILD_NUMBER:0:23}
-fi
+BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
+docker ps -a | awk '{print($NF)}' | grep "^mysql$" &> /dev/null && docker rm -f mysql
+docker ps -a | awk '{print($NF)}' | grep "^joomla$" &> /dev/null && docker rm -f joomla
+docker run -d --name mysql -h mysql -p 3306:3306 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
+docker run -d --name joomla -h joomla -p 80:80 -p 443:443 172.17.42.1:5000/joomla:${BUILD_NUMBER:0:23}
 ```
 
-**04 Robot Framework with Selenium2Library Test master branch**
+- Name: **04 Robot Framework with Selenium2Library Test master branch**
+- Refs: master
+
 ```bash
-if [ "$CI_BUILD_REF_NAME" == "master" ]; then
-    rm -rf /tmp/robot-test/
-    mkdir -p /tmp/robot-test/
-    cd /tmp/robot-test/
-    if [ -d ".git" ]; then
-        git pull ssh://git@172.17.42.1:10022/root/joomla-test.git
-    else
-        git clone ssh://git@172.17.42.1:10022/root/joomla-test.git .
-    fi
-    sed -i 's/^${SERVER}.*/${SERVER}         172.17.42.1/g' resource.txt
-    export DISPLAY=:99
-    pybot . || EXIT_CODE=$?
-    rsync -avrzh --progress --exclude .git /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
-    [ -z $EXIT_CODE ] || exit $EXIT_CODE
+rm -rf /tmp/robot-test/
+mkdir -p /tmp/robot-test/
+cd /tmp/robot-test/
+if [ -d ".git" ]; then
+    git pull ssh://git@172.17.42.1:10022/root/joomla-test.git
+else
+    git clone ssh://git@172.17.42.1:10022/root/joomla-test.git .
 fi
+sed -i 's/^${SERVER}.*/${SERVER}         172.17.42.1/g' resource.txt
+export DISPLAY=:99
+pybot . || EXIT_CODE=$?
+rsync -avrzh --progress --exclude .git /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
+[ -z $EXIT_CODE ] || exit $EXIT_CODE
 ```
 
-**05 Robot Framework with Selenium2Library Test develop branch**
+- Name: **05 Robot Framework with Selenium2Library Test develop branch**
+- Refs: develop
+
 ```bash
-if [ "$CI_BUILD_REF_NAME" == "develop" ]; then
-    BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
-    docker ps -a | awk '{print($NF)}' | grep "^mysql-test$" &> /dev/null && docker rm -f mysql-test
-    docker ps -a | awk '{print($NF)}' | grep "^joomla-test$" &> /dev/null && docker rm -f joomla-test
-    docker run -d --name mysql-test -h mysql -p 3310:3306 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
-    docker run -d --name joomla-test -h joomla -p 8010:80 -e 'MYSQL_PORT=3310' 172.17.42.1:5000/joomla:${BUILD_NUMBER:0:23}
-    rm -rf /tmp/robot-test/
-    mkdir -p /tmp/robot-test/
-    cd /tmp/robot-test/
-    if [ -d ".git" ]; then
-        git pull ssh://git@172.17.42.1:10022/root/joomla-test.git
-    else
-        git clone ssh://git@172.17.42.1:10022/root/joomla-test.git .
-    fi
-    sed -i 's/^${SERVER}.*/${SERVER}         172.17.42.1:8010/g' resource.txt
-    export DISPLAY=:99
-    pybot . || EXIT_CODE=$?
-    rsync -avrzh --progress --exclude .git /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
-    docker rm -f mysql-test joomla-test
-    [ -z $EXIT_CODE ] || exit $EXIT_CODE
+BUILD_NUMBER=$(cat /tmp/docker-build/joomla/build-number)
+docker ps -a | awk '{print($NF)}' | grep "^mysql-test$" &> /dev/null && docker rm -f mysql-test
+docker ps -a | awk '{print($NF)}' | grep "^joomla-test$" &> /dev/null && docker rm -f joomla-test
+docker run -d --name mysql-test -h mysql -p 3310:3306 172.17.42.1:5000/mysql:${BUILD_NUMBER:0:23}
+docker run -d --name joomla-test -h joomla -p 8010:80 -e 'MYSQL_PORT=3310' 172.17.42.1:5000/joomla:${BUILD_NUMBER:0:23}
+rm -rf /tmp/robot-test/
+mkdir -p /tmp/robot-test/
+cd /tmp/robot-test/
+if [ -d ".git" ]; then
+    git pull ssh://git@172.17.42.1:10022/root/joomla-test.git
+else
+    git clone ssh://git@172.17.42.1:10022/root/joomla-test.git .
 fi
+sed -i 's/^${SERVER}.*/${SERVER}         172.17.42.1:8010/g' resource.txt
+export DISPLAY=:99
+pybot . || EXIT_CODE=$?
+rsync -avrzh --progress --exclude .git /tmp/robot-test /home/gitlab_ci_runner/data/$(cat /tmp/docker-build/joomla/build-number)
+docker rm -f mysql-test joomla-test
+[ -z $EXIT_CODE ] || exit $EXIT_CODE
 ```
 
+- Go to Runner page here http://localhost:10081/admin/runners and click on Runner token then click Enable button to make runner assign to joomla repository
 - Go to Local GitLab Joomla repository to change GitLab CI URL here http://localhost:10080/root/joomla/services/gitlab_ci/edit and change Project url to http://172.17.42.1:10081/projects/1
 - Press Test setting button and go to [local GitLab CI](http://localhost:10081) to see how's it working
 

@@ -227,8 +227,7 @@ cat gitlab_ci_runner/.ssh/id_rsa.pub
 - Go to http://localhost:10081 to add joomla repository to GitLab CI
 - Go to Settings and change these settings
   - GitLab url to project: http://172.17.42.1:10080/root/joomla
-- Go to Jobs and on Test (run in parallel) tab click on Remove this job button and Save changes
-- On Deploy (run on success) tab, click on Add a job to add each job one by one as below
+- Go to Jobs and click on Deploy (run on success) tab, click on Add a job to add each job one by one as below
 
 **At this time since GitLab still have bug with the order when you add a job. I suggest to add from 05 job first on top then 04 until 01 and when you click on Save Change. It will order from 01 to 05 in List page. This is mandatory to make the jobs properly running with depenpency**
 
